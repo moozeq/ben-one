@@ -24,7 +24,8 @@ var analysis_section = new Vue({
         this.stats = stats;
         this.counters = counters;
     }
-  }
+  },
+  delimiters: ['[[', ']]']
 })
 
 var files_section = new Vue({
@@ -34,6 +35,8 @@ var files_section = new Vue({
       user_files: undefined,
       others_files: undefined,
       file: undefined,
+      selected_ext: undefined,
+      extensions: undefined,
     }
   },
   mounted () {
@@ -46,6 +49,8 @@ var files_section = new Vue({
           .then(response => {
             this.user_files = response.data.user_files;
             this.others_files = response.data.others_files;
+            this.extensions = response.data.extensions;
+            this.selected_ext = this.extensions[0];
           });
     },
     upload() {
@@ -73,8 +78,8 @@ var files_section = new Vue({
             });
         });
     },
-    analyze(mode) {
-      axios.post('/api/analyze', {'filename': this.file.name, 'mode': mode}
+    analyze() {
+      axios.post('/api/analyze', {'filename': this.file.name, 'ext': this.selected_ext}
         ).then(response => {
             analysis_section.set(response.data.stats, response.data.counters);
             files_section.$bvToast.toast(`File has been analyzed`, {
@@ -92,5 +97,6 @@ var files_section = new Vue({
             });
         });
     }
-  }
+  },
+  delimiters: ['[[', ']]']
 })

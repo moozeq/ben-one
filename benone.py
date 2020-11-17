@@ -8,8 +8,9 @@ from pathlib import Path
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
-from src.analysis import Analysis, WrongFile
+from src.analysis import DigitCounterAnalysis, WrongFile, Reader
 from src.config import AppConfig
+from src.database import Database
 from src.utils import Term
 
 
@@ -47,6 +48,8 @@ def create_app(app_config: AppConfig):
 
     app.config = {**app.config, **app_config.__dict__}
 
+    database = Database('data/users.json', 'data/analyses.json')
+
     @app.context_processor
     def inject_globals():
         return {
@@ -61,17 +64,25 @@ def create_app(app_config: AppConfig):
         return {
             'user_files': [],
             'others_files': [],
+            'extensions': Reader.get_supported_extensions(),
         }
 
     @app.route('/api/analyze', methods=['POST'])
     def analyse_file():
         try:
             data = request.get_json()
-            mode = data['mode']
+            ext = data['ext']
             filename = data['filename']
             filename = secure_filename(filename)
             filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            analysis = Analysis(filename, mode)
+
+            # analysis id is file hash, if done once, do not do it again
+            analysis_id = Reader.file_id(Path(filename), ext)
+
+            # try to get analysis from database using file hash as id
+            if not (analysis := database.get_analysis(analysis_id)):
+                analysis = DigitCounterAnalysis(filename, ext)
+                database.add_analysis(analysis)
         except WrongFile as e:
             Term.error(str(e))
             return {'success': False, 'error': str(e)}, 400
@@ -97,7 +108,11 @@ def create_app(app_config: AppConfig):
         if file:
             filename = secure_filename(file.filename)
             filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            if Path(filename).exists():
+
+            if (stored_file := Path(filename)).exists():
+                if Reader.same_files(stored_file, file):
+                    return {'success': True}, 200
+
                 return {'success': False, 'error': 'File with the same name already exists'}, 400
             file.save(filename)
             return {'success': True}, 200

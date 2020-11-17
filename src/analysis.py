@@ -1,4 +1,5 @@
 from collections import Counter
+from hashlib import sha256
 from pathlib import Path
 from string import digits
 from typing import Dict, Union
@@ -44,24 +45,30 @@ class Reader:
             by extension
     """
 
+    supported_extensions = {
+        '.csv': ',',
+        '.tsv': '\t',
+    }
+
     def __init__(self, filename: str, ext: str = ''):
         self.file = Path(filename)
         if not self.file.exists():
             raise WrongFile(filename, 'not-exists')
 
-        read_funcs = {
-            '.csv': Reader.read_csv,
-            '.tsv': Reader.read_tsv,
-        }
-
-        # if mode provided, use specific function to read file
-        if ext in read_funcs:
+        # if ext properly provided, use read_csv function
+        if ext in Reader.supported_extensions:
             self.ext = ext
-            self.read_func = read_funcs[ext]
         # if mode not provided, try to recognize file by extension
         else:
-            self.ext = self.file.suffix.lower()
-            self.read_func = read_funcs.get(self.ext, Reader.read_raw)
+            if (ext := self.file.suffix.lower()) in Reader.supported_extensions:
+                self.ext = ext
+            else:
+                self.ext = ''  # extension should be empty if not recognized
+
+        self.read_func = Reader.read_csv
+
+        # add extension which were used to parse to id for making distinctions
+        self.id = Reader.file_id(self.file, self.ext)
 
     def __iter__(self):
         """Iterating over lines in file.
@@ -72,26 +79,39 @@ class Reader:
         yield from self.read_func(self.file)
 
     @staticmethod
-    def read_csv(file: Path):
-        import csv
-        with file.open(newline='') as csv_file:
-            reader = csv.reader(csv_file, delimiter=',')
-            yield from reader
+    def file_id(file: Path, ext: str) -> str:
+        # add extension which were used to parse to id for making distinctions
+        return f'{Reader.sha256sum(file)}{ext}'
 
     @staticmethod
-    def read_tsv(file: Path):
-        import csv
-        with file.open(newline='') as tsv_file:
-            reader = csv.reader(tsv_file, delimiter='\t')
-            yield from reader
+    def same_files(file1: Path, file2_content):
+        return Reader.sha256sum(file1) == Reader.sha256sum_b(file2_content)
 
     @staticmethod
-    def read_raw(file: Path):
-        with file.open() as file:
-            yield from file
+    def sha256sum(file: Path) -> str:
+        with file.open('rb') as opened_file:
+            return Reader.sha256sum_b(opened_file)
+
+    @staticmethod
+    def sha256sum_b(f_stream) -> str:
+        sha256_hash = sha256()
+        for byte_block in iter(lambda: f_stream.read(4096), b''):
+            sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    @staticmethod
+    def get_supported_extensions():
+        return list(Reader.supported_extensions.keys())
+
+    @staticmethod
+    def read_csv(file: Path, delimiter=','):
+        import csv
+        with file.open('r', newline='') as csv_file:
+            reader = csv.reader(csv_file, delimiter=delimiter)
+            yield from reader
 
 
-class Analysis:
+class DigitCounterAnalysis:
     """Class for reading file with data and analyze digits distributions.
     If possible, digits distributions will be available to analyze per column in data.
 
@@ -104,15 +124,18 @@ class Analysis:
     """
 
     def __init__(self, filename: str, ext: str = ''):
-        counters, stats = Analysis.analyze_file(filename, ext)
+        counters, stats = DigitCounterAnalysis.analyze_file(filename, ext)
         self._stats = stats
+        # set analysis id as file hash
+        self.id = stats['hash']
+
         # convert counters to digit only counters
         self._digit_counters = {
-            column: Analysis.to_digit_counter(counter)
+            column: DigitCounterAnalysis.to_digit_counter(counter)
             for column, counter in counters.items()
         }
         # merge all counters for whole file analysis and add counter from header which was not included
-        self._merged_digit_counter = Analysis.get_merged_digit_counter(self._digit_counters)
+        self._merged_digit_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_counters)
 
     def get_count(self, letter: Union[str, int], column: str = '') -> int:
         """Get letter count for specific column, or if column name not provided - whole file"""
@@ -145,6 +168,9 @@ class Analysis:
     def get_stats(self) -> Dict[str, Union[str, int]]:
         return self._stats
 
+    def as_dict(self):
+        return self.__dict__
+
     @staticmethod
     def get_merged_digit_counter(counters: Dict[str, Counter]) -> Counter:
         """Merge all counters"""
@@ -155,7 +181,7 @@ class Analysis:
         header_counter = Counter(''.join(counters.keys()))
 
         # needs to again convert to digit counter
-        merged_counter = Analysis.to_digit_counter(merged_counter + header_counter)
+        merged_counter = DigitCounterAnalysis.to_digit_counter(merged_counter + header_counter)
 
         return merged_counter
 
@@ -196,13 +222,8 @@ class Analysis:
         header = next(reader_it)
 
         # create counter for each column in header
-        # if header is a single string, treat as one column
-        if isinstance(header, str):
-            header_len = 1
-            counters = [Counter()]
-        else:
-            header_len = len(header)
-            counters = [Counter() for _ in header]
+        header_len = len(header)
+        counters = [Counter() for _ in header]
 
         # iterate over each line, and each element in line
         # count omitted lines
@@ -211,7 +232,7 @@ class Analysis:
         parsed_words = 0
         for line in reader_it:
             parsed_lines += 1
-            if len(line) != len(header):
+            if len(line) != header_len:
                 omitted_lines += 1
                 # raise WrongFile(filename, 'corrupted')
             for i, elem in enumerate(line):
@@ -229,5 +250,6 @@ class Analysis:
             'parsed_lines': parsed_lines,
             'parsed_words': parsed_words,
             'ext': reader.ext,
+            'hash': reader.id,
         }
         return counters, stats
