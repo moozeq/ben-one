@@ -52,7 +52,7 @@ class Reader:
             '.tsv': Reader.read_tsv,
             '': Reader.read_raw,
         }
-        self.read_func = read_funcs.get(self.file.suffix, Reader.read_raw)
+        self.read_func = read_funcs.get(self.file.suffix.lower(), Reader.read_raw)
 
     def __iter__(self):
         """Iterating over lines in file.

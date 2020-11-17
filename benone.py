@@ -2,8 +2,14 @@
 
 import argparse
 import json
+import os
+import sys
 
 from flask import Flask, render_template, request
+from werkzeug.utils import secure_filename
+
+from src.config import AppConfig
+from src.utils import Term
 
 
 class WrongRequest(Exception):
@@ -24,21 +30,25 @@ class WrongEnvironment(Exception):
         super().__init__(self.message)
 
 
-def create_app(cfg: dict):
+def get_analysis(filename: str):
+    pass
+
+
+def create_app(app_config: AppConfig):
     app = Flask(__name__)
-    if cfg['ENV'] == 'development':
+    if app_config.ENV == 'development':
         # refreshing application
         app.config = {
             **app.config,
             'SEND_FILE_MAX_AGE_DEFAULT': 0,
             'TEMPLATES_AUTO_RELOAD': True
         }
-    elif cfg['ENV'] == 'production':
+    elif app_config.ENV == 'production':
         pass
     else:
-        raise WrongEnvironment(cfg['ENV'])
+        raise WrongEnvironment(app_config.ENV)
 
-    app.config['ENV'] = cfg['ENV']
+    app.config = {**app.config, **app_config.__dict__}
 
     @app.context_processor
     def inject_globals():
@@ -49,17 +59,30 @@ def create_app(cfg: dict):
     def index():
         return render_template('index.html')
 
-    @app.route('/api/files', methods=['GET'])
+    @app.route('/api/analyses', methods=['GET'])
     def send_users_files():
         return {
-            'files': []
+            'user_files': [],
+            'others_files': [],
         }
 
     @app.route('/api/upload', methods=['POST'])
     def get_user_file():
-        data = request.get_json()
 
-    app.run(host=cfg['HOST'], port=cfg['PORT'])
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return {'success': False}, 400
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        if file.filename == '':
+            return {'success': False}, 400
+        if file:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return {'success': True}, 200
+
+    app.run(host=app.config['HOST'], port=app.config['PORT'])
 
 
 if __name__ == '__main__':
@@ -67,7 +90,10 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--config', type=str, default='cfg.json', help='config filename')
 
     args = parser.parse_args()
-    with open(args.config, 'r') as cfg_file:
-        config = json.load(cfg_file)
+    try:
+        config = AppConfig(args.config)
+    except ValueError:
+        Term.error(f'Invalid configuration file = {args.config}')
+        sys.exit(1)
 
     create_app(config)
