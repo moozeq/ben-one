@@ -1,0 +1,14 @@
+.c-up-row {
+    margin-top: 2vh;
+    height: 65vh;
+}
+
+.c-down-row {
+    margin-top: 1vh;
+    height: 15vh;
+}
+
+.c-list {
+    height: 100%;
+    overflow-y: auto;
+}

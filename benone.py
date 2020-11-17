@@ -48,22 +48,25 @@ def create_app(app_config: AppConfig):
 
     app.config = {**app.config, **app_config.__dict__}
 
-    database = Database('data/users.json', 'data/analyses.json')
+    database = Database('data/users.pickle', 'data/analyses.pickle', app_config)
 
     @app.context_processor
     def inject_globals():
-        return {
-        }
+        return {}
 
     @app.route('/', methods=['GET'])
     def index():
         return render_template('index.html')
 
-    @app.route('/api/analyses', methods=['GET'])
-    def send_users_files():
+    @app.route('/api/files', methods=['GET'])
+    def files_list():
         return {
-            'user_files': [],
-            'others_files': [],
+            'files': database.get_filenames(),
+        }
+
+    @app.route('/api/extensions', methods=['GET'])
+    def extensions_list():
+        return {
             'extensions': Reader.get_supported_extensions(),
         }
 
@@ -81,7 +84,7 @@ def create_app(app_config: AppConfig):
 
             # try to get analysis from database using file hash as id
             if not (analysis := database.get_analysis(analysis_id)):
-                analysis = DigitCounterAnalysis(filename, ext)
+                analysis = DigitCounterAnalysis(filename, ext=ext)
                 database.add_analysis(analysis)
         except WrongFile as e:
             Term.error(str(e))
@@ -109,11 +112,13 @@ def create_app(app_config: AppConfig):
             filename = secure_filename(file.filename)
             filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
+            # if file exists and content is same do not save again
             if (stored_file := Path(filename)).exists():
                 if Reader.same_files(stored_file, file):
                     return {'success': True}, 200
-
-                return {'success': False, 'error': 'File with the same name already exists'}, 400
+                # same filename but different content - not allowed, sorry
+                else:
+                    return {'success': False, 'error': 'File with the same name already exists'}, 400
             file.save(filename)
             return {'success': True}, 200
 

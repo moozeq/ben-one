@@ -65,7 +65,7 @@ class Reader:
             else:
                 self.ext = ''  # extension should be empty if not recognized
 
-        self.read_func = Reader.read_csv
+        self.delim = Reader.supported_extensions.get(self.ext, ',')
 
         # add extension which were used to parse to id for making distinctions
         self.id = Reader.file_id(self.file, self.ext)
@@ -76,15 +76,23 @@ class Reader:
         Returns:
             next line yielded from file
         """
-        yield from self.read_func(self.file)
+        yield from self.read_csv(self.file)
+
+    def read_csv(self, file: Path):
+        import csv
+        with file.open('r', newline='') as csv_file:
+            reader = csv.reader(csv_file, delimiter=self.delim)
+            yield from reader
 
     @staticmethod
     def file_id(file: Path, ext: str) -> str:
+        """Unique file ID per content, filename not included except extension."""
         # add extension which were used to parse to id for making distinctions
         return f'{Reader.sha256sum(file)}{ext}'
 
     @staticmethod
     def same_files(file1: Path, file2_content):
+        """Check if content of"""
         return Reader.sha256sum(file1) == Reader.sha256sum_b(file2_content)
 
     @staticmethod
@@ -103,13 +111,6 @@ class Reader:
     def get_supported_extensions():
         return list(Reader.supported_extensions.keys())
 
-    @staticmethod
-    def read_csv(file: Path, delimiter=','):
-        import csv
-        with file.open('r', newline='') as csv_file:
-            reader = csv.reader(csv_file, delimiter=delimiter)
-            yield from reader
-
 
 class DigitCounterAnalysis:
     """Class for reading file with data and analyze digits distributions.
@@ -123,7 +124,7 @@ class DigitCounterAnalysis:
         filename (str): path to file to analyze, stored locally
     """
 
-    def __init__(self, filename: str, ext: str = ''):
+    def __init__(self, filename: str, /, *, ext: str = ''):
         counters, stats = DigitCounterAnalysis.analyze_file(filename, ext)
         self._stats = stats
         # set analysis id as file hash
@@ -136,6 +137,9 @@ class DigitCounterAnalysis:
         }
         # merge all counters for whole file analysis and add counter from header which was not included
         self._merged_digit_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_counters)
+
+    def get_stats(self) -> Dict[str, Union[str, int]]:
+        return self._stats
 
     def get_count(self, letter: Union[str, int], column: str = '') -> int:
         """Get letter count for specific column, or if column name not provided - whole file"""
@@ -164,12 +168,6 @@ class DigitCounterAnalysis:
 
     def get_counters(self) -> Dict[str, Counter]:
         return self._digit_counters
-
-    def get_stats(self) -> Dict[str, Union[str, int]]:
-        return self._stats
-
-    def as_dict(self):
-        return self.__dict__
 
     @staticmethod
     def get_merged_digit_counter(counters: Dict[str, Counter]) -> Counter:
@@ -233,8 +231,11 @@ class DigitCounterAnalysis:
         for line in reader_it:
             parsed_lines += 1
             if len(line) != header_len:
-                omitted_lines += 1
+                # we can enforce only proper files
+                # but we may also handle this
                 # raise WrongFile(filename, 'corrupted')
+                omitted_lines += 1
+                continue
             for i, elem in enumerate(line):
                 parsed_words += 1
                 counters[i] += Counter(elem)
@@ -245,11 +246,12 @@ class DigitCounterAnalysis:
             for column, counter in zip(header, counters)
         }
         stats = {
-            'header_size': header_len,
-            'omitted_lines': omitted_lines,
-            'parsed_lines': parsed_lines,
-            'parsed_words': parsed_words,
+            'filename': reader.file.name,
             'ext': reader.ext,
             'hash': reader.id,
+            'header_size': header_len,
+            'parsed_lines': parsed_lines,
+            'omitted_lines': omitted_lines,
+            'parsed_words': parsed_words,
         }
         return counters, stats

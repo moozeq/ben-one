@@ -33,34 +33,40 @@
     <b-navbar toggleable="lg" type="dark" variant="dark" id="navbar" sticky="true">
         <b-navbar-brand href="{{ home }}">BeNone</b-navbar-brand>
         <b-navbar-nav class="ml-auto">
-            <b-nav-item><b-button
-                    v-b-tooltip.hover
-                    title="Help"
-                    variant="outline-success"
-                    @click="help()">Help
-            </b-button></b-nav-item>
+            <b-nav-item>
+                <b-button
+                        @click="help()"
+                        title="Help"
+                        v-b-tooltip.hover
+                        variant="outline-success">Help
+                </b-button>
+            </b-nav-item>
+            <b-nav-item>
+                <b-avatar icon="people-fill" variant="success"></b-avatar>
+            </b-nav-item>
         </b-navbar-nav>
     </b-navbar>
 
     <div class="container">
-        <div class="row">
-        </div>
-        <div class="row">
-            <div class="col-md">
-                <b-list-group class="border border-dark" id="files-section">
-                    <b-form-file
-                            :state="Boolean(file)"
-                            drop-placeholder="Drop file here..."
-                            placeholder="Choose a file or drop it here..."
-                            v-model="file"
-                    ></b-form-file>
-                    <b-button variant="outline-success" @click="upload()">Upload</b-button>
-                    <b-form-select :options="extensions" v-model="selected_ext"></b-form-select>
-                    <b-button @click="analyze()" variant="success">Analyze</b-button>
+        <div class="row c-up-row">
+            <div class="col-9">
+                <iframe height="100%" id="igraph" scrolling="no" src="{{ url_for('static', filename='plots.html') }}"
+                        style="border:none;" width="100%"></iframe>
+            </div>
+            <div class="col-3">
+                <b-list-group class="border border-dark c-list" id="files-section">
+                    <b-list-group-item :class="{'active': selected == index}" @click="select_file(file)"
+                                       class="list-group-item-action" v-for="(file, index) in files">
+                        <b-row>
+                            [[ file ]]
+                        </b-row>
+                    </b-list-group-item>
                 </b-list-group>
             </div>
-            <div class="col-md">
-                <b-list-group class="border border-dark" id="analysis-section">
+        </div>
+        <div class="row c-down-row">
+            <div class="col-9">
+                <b-form-group class="border border-dark" id="analysis-section">
                     <b-form-textarea
                             id="stats"
                             max-rows="6"
@@ -68,7 +74,27 @@
                             rows="3"
                             v-model="stats"
                     ></b-form-textarea>
-                </b-list-group>
+                </b-form-group>
+            </div>
+            <div class="col-3">
+                <b-input-group id="file-upload">
+                    <b-form-file
+                            class="m-1"
+                            drop-placeholder="Drop file here..."
+                            placeholder="File"
+                            v-model="file"
+                    ></b-form-file>
+                    <b-input-group-append>
+                        <b-button @click="upload()" class="m-1" variant="primary">Upload</b-button>
+                    </b-input-group-append>
+                </b-input-group>
+
+                <b-input-group id="file-analyze">
+                    <b-form-select :options="extensions" class="m-1" v-model="selected_ext"></b-form-select>
+                    <b-input-group-append>
+                        <b-button @click="analyze()" class="m-1" variant="danger">Analyze</b-button>
+                    </b-input-group-append>
+                </b-input-group>
             </div>
         </div>
     </div>
