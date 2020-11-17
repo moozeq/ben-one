@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml" xmlns:v-slot="http://www.w3.org/1999/XSL/Transform"
-      xmlns:v-bind="http://www.w3.org/1999/xhtml">
+<html lang="en"
+>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -10,7 +10,7 @@
     <!-- Add this to <head> -->
 
     <!-- Load required Bootstrap and BootstrapVue CSS -->
-    <link type="text/css" rel="stylesheet" href="//unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="//unpkg.com/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
     <link type="text/css" rel="stylesheet" href="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
 
     <!-- Load Vue followed by BootstrapVue -->
@@ -44,12 +44,15 @@
             <div class="col-md">
                 <b-list-group class="c-comes-list border border-dark" id="files-section">
                     <b-form-file
-                        v-model="file"
-                        :state="Boolean(file)"
-                        placeholder="Choose a file or drop it here..."
-                        drop-placeholder="Drop file here..."
+                            :state="Boolean(file)"
+                            drop-placeholder="Drop file here..."
+                            placeholder="Choose a file or drop it here..."
+                            v-model="file"
                     ></b-form-file>
                     <b-button variant="outline-success" @click="upload()">Upload</b-button>
+                    <b-button @click="analyze('.csv')" variant="success">Analyze .csv</b-button>
+                    <b-button @click="analyze('.tsv')" variant="success">Analyze .tsv</b-button>
+                    <b-button @click="analyze('')" variant="success">Analyze generic</b-button>
                 </b-list-group>
             </div>
             <div class="col-md">

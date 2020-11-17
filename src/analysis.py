@@ -36,13 +36,15 @@ class WrongColumn(Exception):
 
 
 class Reader:
-    def __init__(self, filename: str):
-        """Function which tries to recognize file format and read it.
-        If failed, just read file line by line.
+    """Class for reading from file.
 
-        Args:
-            filename (str):
-        """
+    Args:
+        filename (str): path to file to analyze, stored locally
+        ext (str): file format, if empty, try recognizing
+            by extension
+    """
+
+    def __init__(self, filename: str, ext: str = ''):
         self.file = Path(filename)
         if not self.file.exists():
             raise WrongFile(filename, 'not-exists')
@@ -50,9 +52,16 @@ class Reader:
         read_funcs = {
             '.csv': Reader.read_csv,
             '.tsv': Reader.read_tsv,
-            '': Reader.read_raw,
         }
-        self.read_func = read_funcs.get(self.file.suffix.lower(), Reader.read_raw)
+
+        # if mode provided, use specific function to read file
+        if ext in read_funcs:
+            self.ext = ext
+            self.read_func = read_funcs[ext]
+        # if mode not provided, try to recognize file by extension
+        else:
+            self.ext = self.file.suffix.lower()
+            self.read_func = read_funcs.get(self.ext, Reader.read_raw)
 
     def __iter__(self):
         """Iterating over lines in file.
@@ -87,14 +96,17 @@ class Analysis:
     If possible, digits distributions will be available to analyze per column in data.
 
     Args:
-        filename (str) -- path to file to analyze, stored locally
+        filename (str): path to file to analyze, stored locally
+        ext (str): file format
 
     Attributes:
-        filename (str) -- path to file to analyze, stored locally
+        filename (str): path to file to analyze, stored locally
     """
 
-    def __init__(self, filename: str):
-        counters = Analysis.analyze_file(filename)
+    def __init__(self, filename: str, ext: str = ''):
+        counters, stats = Analysis.analyze_file(filename, ext)
+        self._stats = stats
+        # convert counters to digit only counters
         self._digit_counters = {
             column: Analysis.to_digit_counter(counter)
             for column, counter in counters.items()
@@ -102,7 +114,7 @@ class Analysis:
         # merge all counters for whole file analysis and add counter from header which was not included
         self._merged_digit_counter = Analysis.get_merged_digit_counter(self._digit_counters)
 
-    def get_count(self, letter: Union[str, int], column: str = ''):
+    def get_count(self, letter: Union[str, int], column: str = '') -> int:
         """Get letter count for specific column, or if column name not provided - whole file"""
         counter = self.get_counter(column)
 
@@ -115,7 +127,7 @@ class Analysis:
             raise WrongLetter(letter)
         return counter[letter]
 
-    def get_counter(self, column: str = ''):
+    def get_counter(self, column: str = '') -> Counter:
         """Get counter for specific column, or if column name not provided - whole file"""
         # no column name provided, use merged counter
         if not column:
@@ -126,6 +138,12 @@ class Analysis:
                 raise WrongColumn(column)
             counter = self._digit_counters[column]
         return counter
+
+    def get_counters(self) -> Dict[str, Counter]:
+        return self._digit_counters
+
+    def get_stats(self) -> Dict[str, Union[str, int]]:
+        return self._stats
 
     @staticmethod
     def get_merged_digit_counter(counters: Dict[str, Counter]) -> Counter:
@@ -150,7 +168,9 @@ class Analysis:
         })
 
     @staticmethod
-    def analyze_file(filename: str) -> Dict[str, Counter]:
+    def analyze_file(filename: str, ext: str = '') -> (
+            Dict[str, Counter],
+            Dict[str, Union[str, int]]):
         """Analyzing file in terms of letters usage.
 
         For each column in file, getting header and counter for
@@ -160,22 +180,42 @@ class Analysis:
 
         Args:
             filename (str): path to file which will be analyzed
+            ext (str): file format, if empty, try recognizing
+                by file extension
 
         Returns:
-            dictionary of counters, where keys are columns names
-            and values are counters for those columns
+            1st: dictionary of counters, where keys are columns names
+                and values are counters for those columns
+            2nd: dictionary with statistics from parsing file
         """
-        reader_it = iter(Reader(filename))
+
+        reader = Reader(filename, ext)
+        reader_it = iter(reader)
+
+        # get file header
         header = next(reader_it)
 
         # create counter for each column in header
-        counters = [Counter() for _ in header]
+        # if header is a single string, treat as one column
+        if isinstance(header, str):
+            header_len = 1
+            counters = [Counter()]
+        else:
+            header_len = len(header)
+            counters = [Counter() for _ in header]
 
         # iterate over each line, and each element in line
+        # count omitted lines
+        omitted_lines = 0
+        parsed_lines = 0
+        parsed_words = 0
         for line in reader_it:
+            parsed_lines += 1
             if len(line) != len(header):
-                raise WrongFile(filename, 'corrupted')
+                omitted_lines += 1
+                # raise WrongFile(filename, 'corrupted')
             for i, elem in enumerate(line):
+                parsed_words += 1
                 counters[i] += Counter(elem)
 
         # map counters to header columns
@@ -183,4 +223,11 @@ class Analysis:
             column: counter
             for column, counter in zip(header, counters)
         }
-        return counters
+        stats = {
+            'header_size': header_len,
+            'omitted_lines': omitted_lines,
+            'parsed_lines': parsed_lines,
+            'parsed_words': parsed_words,
+            'ext': reader.ext,
+        }
+        return counters, stats

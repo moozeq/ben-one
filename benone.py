@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import os
 import sys
+from pathlib import Path
 
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
+from src.analysis import Analysis, WrongFile
 from src.config import AppConfig
 from src.utils import Term
 
@@ -28,10 +29,6 @@ class WrongEnvironment(Exception):
         self.env = env
         self.message = message
         super().__init__(self.message)
-
-
-def get_analysis(filename: str):
-    pass
 
 
 def create_app(app_config: AppConfig):
@@ -66,20 +63,43 @@ def create_app(app_config: AppConfig):
             'others_files': [],
         }
 
+    @app.route('/api/analyze', methods=['POST'])
+    def analyse_file():
+        try:
+            data = request.get_json()
+            mode = data['mode']
+            filename = data['filename']
+            filename = secure_filename(filename)
+            filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            analysis = Analysis(filename, mode)
+        except WrongFile as e:
+            Term.error(str(e))
+            return {'success': False, 'error': str(e)}, 400
+        except (KeyError, TypeError) as e:
+            Term.error(str(e))
+            return {'success': False, 'error': str(e)}, 400
+        except Exception as e:
+            Term.error(str(e))
+            return {'success': False, 'error': str(e)}, 400
+
+        return {'success': True, 'stats': analysis.get_stats(), 'counters': analysis.get_counters()}, 200
+
     @app.route('/api/upload', methods=['POST'])
     def get_user_file():
-
         # check if the post request has the file part
         if 'file' not in request.files:
-            return {'success': False}, 400
+            return {'success': False, 'error': 'No file'}, 400
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
         if file.filename == '':
-            return {'success': False}, 400
+            return {'success': False, 'error': 'File not selected'}, 400
         if file:
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if Path(filename).exists():
+                return {'success': False, 'error': 'File with the same name already exists'}, 400
+            file.save(filename)
             return {'success': True}, 200
 
     app.run(host=app.config['HOST'], port=app.config['PORT'])
