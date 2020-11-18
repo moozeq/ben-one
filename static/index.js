@@ -10,18 +10,52 @@ var navbar = new Vue({
   }
 })
 
+var ctx = document.getElementById('chart').getContext('2d');
+var chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+        datasets: [{
+            label: '# of digit within column',
+            data: [],
+            backgroundColor: 'rgba(0, 128, 255, 1.0)'
+        }]
+    },
+    options: {
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true
+                }
+            }]
+        }
+    }
+});
+
 var analysis_section = new Vue({
   el: '#analysis-section',
   data() {
     return {
       stats: undefined,
       counters: undefined,
+      data: undefined,
     }
   },
   methods: {
     set: function(stats, counters) {
         this.stats = stats;
         this.counters = counters;
+        this.update_chart('7_2009');
+    },
+    update_chart: function(column) {
+        let counter = this.counters[column];
+
+        for (const i of Array(10).keys()) {
+            const digit = ((i + 1) % 10).toString(); // starts from 1 to 0
+            chart.data.datasets[0].data.push(counter[digit])
+        }
+
+        chart.update();
     }
   },
   delimiters: ['[[', ']]']

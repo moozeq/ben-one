@@ -22,12 +22,6 @@
 
     <!-- Load axios for communication with server -->
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-
-    <!-- Load vue cookies for storing user id -->
-    <script src="https://unpkg.com/vue-cookies@1.5.12/vue-cookies.js"></script>
-
-    <!-- Load material design icons -->
-    <link href="//cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
     <b-navbar toggleable="lg" type="dark" variant="dark" id="navbar" sticky="true">
@@ -48,11 +42,15 @@
     </b-navbar>
 
     <div class="container">
+        <!-- upper row containing plot and list of files --->
         <div class="row c-up-row">
+            <!-- plot --->
             <div class="col-9">
-                <iframe height="100%" id="igraph" scrolling="no" src="{{ url_for('static', filename='plots.html') }}"
-                        style="border:none;" width="100%"></iframe>
+                <div>
+                    <canvas height="200" id="chart"></canvas>
+                </div>
             </div>
+            <!-- list of files --->
             <div class="col-3">
                 <b-list-group class="border border-dark c-list" id="files-section">
                     <b-list-group-item :class="{'active': selected == index}" @click="select_file(file)"
@@ -64,7 +62,9 @@
                 </b-list-group>
             </div>
         </div>
+        <!-- bottom row containing statistics and controls --->
         <div class="row c-down-row">
+            <!-- statistics --->
             <div class="col-9">
                 <b-form-group class="border border-dark" id="analysis-section">
                     <b-form-textarea
@@ -76,6 +76,7 @@
                     ></b-form-textarea>
                 </b-form-group>
             </div>
+            <!-- controls --->
             <div class="col-3">
                 <b-input-group id="file-upload">
                     <b-form-file
@@ -99,6 +100,17 @@
         </div>
     </div>
 
+    <!-- Load vue cookies for storing user id -->
+    <script src="https://unpkg.com/vue-cookies@1.5.12/vue-cookies.js"></script>
+
+    <!-- Charts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+    <script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+
+    <!-- Load material design icons -->
+    <link href="//cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet" type="text/css"/>
+
+    <!-- Load material design icons -->
     <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>

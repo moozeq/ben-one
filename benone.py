@@ -60,18 +60,26 @@ def create_app(app_config: AppConfig):
 
     @app.route('/api/files', methods=['GET'])
     def files_list():
+        """Get available files uploaded by users."""
         return {
             'files': database.get_filenames(),
         }
 
     @app.route('/api/extensions', methods=['GET'])
     def extensions_list():
+        """Get available extensions to use when parsing file."""
         return {
             'extensions': Reader.get_supported_extensions(),
         }
 
     @app.route('/api/analyze', methods=['POST'])
-    def analyse_file():
+    def analyze_file():
+        """Analyze file for Benford's Law.
+
+        First check if analysis not in database, if True - just load
+        it and show to user, if not - do analysis.
+
+        """
         try:
             data = request.get_json()
             ext = data['ext']
@@ -100,6 +108,13 @@ def create_app(app_config: AppConfig):
 
     @app.route('/api/upload', methods=['POST'])
     def get_user_file():
+        """Get file from user.
+
+        If file with same name exists - check if content is the
+        same, if yes - do not save file, if not - return error
+        that names must be unique (for now).
+
+        """
         # check if the post request has the file part
         if 'file' not in request.files:
             return {'success': False, 'error': 'No file'}, 400
@@ -118,7 +133,9 @@ def create_app(app_config: AppConfig):
                     return {'success': True}, 200
                 # same filename but different content - not allowed, sorry
                 else:
-                    return {'success': False, 'error': 'File with the same name already exists'}, 400
+                    return {'success': False, 'error': 'File with the same name already exists'
+                                                       'unfortunately it is not allowed yet'}, 400
+            # everything's ok, save file under UPLOAD_FOLDER
             file.save(filename)
             return {'success': True}, 200
 
