@@ -104,7 +104,14 @@ def create_app(app_config: AppConfig):
             Term.error(str(e))
             return {'success': False, 'error': str(e)}, 400
 
-        return {'success': True, 'stats': analysis.get_stats(), 'counters': analysis.get_counters()}, 200
+        return {
+                   'success': True,
+                   'stats': analysis.get_stats(),
+                   'counters': analysis.get_counters('simple'),
+                   'frequenters': analysis.get_frequenters('simple'),
+                   'lead_frequenters': analysis.get_frequenters('lead'),
+                   'benfords_law': analysis.get_benfords_law_pvalues(),
+               }, 200
 
     @app.route('/api/upload', methods=['POST'])
     def get_user_file():

@@ -36,6 +36,14 @@ class WrongColumn(Exception):
         super().__init__(self.message)
 
 
+class WrongCountersType(Exception):
+    """Exception raised when trying to get counters of wrong type than allowed."""
+
+    def __init__(self, c_type: str):
+        self.message = f'Wrong counter type = {c_type}'
+        super().__init__(self.message)
+
+
 class Reader:
     """Class for reading from file.
 
@@ -125,18 +133,34 @@ class DigitCounterAnalysis:
     """
 
     def __init__(self, filename: str, /, *, ext: str = ''):
-        counters, stats = DigitCounterAnalysis.analyze_file(filename, ext)
+        counters, lead_counters, stats = DigitCounterAnalysis.analyze_file(filename, ext)
         self._stats = stats
         # set analysis id as file hash
         self.id = stats['hash']
 
-        # convert counters to digit only counters
-        self._digit_counters = {
-            column: DigitCounterAnalysis.to_digit_counter(counter)
-            for column, counter in counters.items()
-        }
+        def to_digit_counters(sel_counters):
+            """Convert counters to digit only counters"""
+            return {
+                column: DigitCounterAnalysis.to_digit_counter(counter)
+                for column, counter in sel_counters.items()
+            }
+
+        # simple counters
+        self._digit_counters = to_digit_counters(counters)
+        self._digit_lead_counters = to_digit_counters(lead_counters)
+
+        # counters converted to frequenters
+        self._digit_frequenters = DigitCounterAnalysis.to_frequenters(self._digit_counters)
+        self._digit_lead_frequenters = DigitCounterAnalysis.to_frequenters(self._digit_lead_counters)
+
         # merge all counters for whole file analysis and add counter from header which was not included
         self._merged_digit_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_counters)
+        self._merged_digit_lead_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_lead_counters)
+
+        self._benfords_law_results = {
+            column: DigitCounterAnalysis.benfords_law(frequenter)
+            for column, frequenter in self._digit_lead_frequenters.items()
+        }
 
     def get_stats(self) -> Dict[str, Union[str, int]]:
         return self._stats
@@ -166,8 +190,66 @@ class DigitCounterAnalysis:
             counter = self._digit_counters[column]
         return counter
 
-    def get_counters(self) -> Dict[str, Counter]:
-        return self._digit_counters
+    def get_counters(self, c_type: str) -> Dict[str, Counter]:
+        """Get all counters per column, counter types = ['lead', 'simple']"""
+        if c_type == 'simple':
+            return self._digit_counters
+        elif c_type == 'lead':
+            return self._digit_lead_counters
+        else:
+            raise WrongCountersType
+
+    def get_frequenters(self, c_type: str) -> Dict[str, Dict[str, float]]:
+        """Get all frequenters per column, counter types = ['lead', 'simple']"""
+        if c_type == 'simple':
+            return self._digit_frequenters
+        elif c_type == 'lead':
+            return self._digit_lead_frequenters
+        else:
+            raise WrongCountersType
+
+    def get_benfords_law_pvalues(self):
+        """Get all pvalues per column from Kolmogorov-Smirnov test for Benford's law"""
+        return self._benfords_law_results
+
+    @staticmethod
+    def benfords_law(frequenter: Dict[str, float]):
+        from scipy.stats import ks_2samp
+        bl_frequencies = {
+            '1': 30.1,
+            '2': 17.6,
+            '3': 12.5,
+            '4': 9.7,
+            '5': 7.9,
+            '6': 6.7,
+            '7': 5.8,
+            '8': 5.1,
+            '9': 4.6,
+        }
+        bl_f = []
+        sa_f = []
+        for digit in bl_frequencies:
+            bl_f.append(bl_frequencies[digit])
+            sa_f.append(frequenter[digit])
+
+        result = ks_2samp(bl_f, sa_f)
+
+        return round(result.pvalue, 4)
+
+    @staticmethod
+    def to_frequenters(digit_counter: Dict[str, Counter]) -> Dict[str, Dict[str, float]]:
+        """Convert counter to frequenters, care about dividing by 0"""
+        f_counters = {
+            column: {
+                letter:
+                    round((counter[letter] * 100.0) / c_sum, 1)
+                    if (c_sum := sum(counter.values())) > 0
+                    else 0
+                for letter in counter
+            }
+            for column, counter in digit_counter.items()
+        }
+        return f_counters
 
     @staticmethod
     def get_merged_digit_counter(counters: Dict[str, Counter]) -> Counter:
@@ -210,7 +292,9 @@ class DigitCounterAnalysis:
         Returns:
             1st: dictionary of counters, where keys are columns names
                 and values are counters for those columns
-            2nd: dictionary with statistics from parsing file
+            2nd: dictionary of lead counters, where keys are columns names
+                and values are counters for leading letters in those columns
+            3rd: dictionary with statistics from parsing file
         """
 
         reader = Reader(filename, ext)
@@ -222,6 +306,7 @@ class DigitCounterAnalysis:
         # create counter for each column in header
         header_len = len(header)
         counters = [Counter() for _ in header]
+        lead_counters = [Counter() for _ in header]
 
         # iterate over each line, and each element in line
         # count omitted lines
@@ -238,20 +323,28 @@ class DigitCounterAnalysis:
                 continue
             for i, elem in enumerate(line):
                 parsed_words += 1
+                # count leading letters only if len(elem) > 0
+                if elem:
+                    lead_counters[i] += Counter(elem[0])
+
                 counters[i] += Counter(elem)
 
-        # map counters to header columns
-        counters = {
-            column: counter
-            for column, counter in zip(header, counters)
-        }
+        def map_counter(sel_counters, columns):
+            """Map counters to columns"""
+            return {
+                column: counter
+                for column, counter in zip(columns, sel_counters)
+            }
+
+        counters = map_counter(counters, header)
+        lead_counters = map_counter(lead_counters, header)
         stats = {
             'filename': reader.file.name,
             'ext': reader.ext,
-            'hash': reader.id,
             'header_size': header_len,
             'parsed_lines': parsed_lines,
             'omitted_lines': omitted_lines,
             'parsed_words': parsed_words,
+            'hash': reader.id,
         }
-        return counters, stats
+        return counters, lead_counters, stats

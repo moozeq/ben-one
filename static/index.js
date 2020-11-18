@@ -14,11 +14,17 @@ var ctx = document.getElementById('chart').getContext('2d');
 var chart = new Chart(ctx, {
     type: 'bar',
     data: {
-        labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-        datasets: [{
-            label: '# of digit within column',
+        labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+        datasets: [
+        {
+            label: '% of occurring as leading digit to satisfy Benford\'s law',
+            data: [30.1, 17.6, 12.5, 9.7, 7.9, 6.7, 5.8, 5.1, 4.6],
+            backgroundColor: 'rgba(255, 128, 0, 0.6)'
+        },
+        {
+            label: '% of occurring as leading digit in data',
             data: [],
-            backgroundColor: 'rgba(0, 128, 255, 1.0)'
+            backgroundColor: 'rgba(0, 128, 255, 0.6)'
         }]
     },
     options: {
@@ -37,24 +43,37 @@ var analysis_section = new Vue({
   data() {
     return {
       stats: undefined,
+      benfords_law: undefined,
       counters: undefined,
+      frequenters: undefined,
+      lead_frequenters: undefined,
+      ben_data: undefined,
       data: undefined,
     }
   },
   methods: {
-    set: function(stats, counters) {
+    set: function(stats, benfords_law, counters, frequenters, lead_frequenters) {
         this.stats = stats;
+        this.benfords_law = benfords_law;
         this.counters = counters;
-        this.update_chart('7_2009');
+        this.frequenters = frequenters;
+        this.lead_frequenters = lead_frequenters;
+
+        // get columns names
+        let columns = Object.keys(lead_frequenters);
+        file_columns.populate_columns(columns);
     },
     update_chart: function(column) {
-        let counter = this.counters[column];
+        this.ben_data = 'Benfor\'s law pvalue = ' + this.benfords_law[column];
+        let lead_frequenter = this.lead_frequenters[column];
 
-        for (const i of Array(10).keys()) {
-            const digit = ((i + 1) % 10).toString(); // starts from 1 to 0
-            chart.data.datasets[0].data.push(counter[digit])
+        var new_data = [];
+        for (const i of Array(9).keys()) {
+            const digit = (i + 1).toString(); // starts from 1 to 0
+            new_data.push(lead_frequenter[digit])
         }
 
+        chart.data.datasets[1].data = new_data;
         chart.update();
     }
   },
@@ -106,7 +125,7 @@ var file_upload = new Vue({
     }
   },
   methods: {
-    upload() {
+    upload: function() {
       let formData = new FormData();
       formData.append('file', this.file);
 
@@ -156,7 +175,7 @@ var file_analyze = new Vue({
             this.selected_ext = this.extensions[0];
           });
     },
-    analyze() {
+    analyze: function() {
         let filename = files_section.get_selected();
         if (filename == undefined) {
             file_analyze.$bvToast.toast(`Select file first`, {
@@ -168,13 +187,17 @@ var file_analyze = new Vue({
       }
       axios.post('/api/analyze', {'filename': filename, 'ext': this.selected_ext}
         ).then(response => {
-            analysis_section.set(response.data.stats, response.data.counters);
-            file_analyze.$bvToast.toast(`File has been analyzed`, {
+            let stats = response.data.stats;
+            let benfords_law = response.data.benfords_law;
+            let counters = response.data.counters;
+            let frequenters = response.data.frequenters;
+            let lead_frequenters = response.data.lead_frequenters;
+            analysis_section.set(stats, benfords_law, counters, frequenters, lead_frequenters);
+            file_analyze.$bvToast.toast(`File has been analyzed, now select column`, {
               title: 'Success',
               variant: 'success',
               autoHideDelay: 2000
             });
-
         })
         .catch(error => {
             file_analyze.$bvToast.toast(`Could not analyze file: ${error.response.data.error}`, {
@@ -183,6 +206,37 @@ var file_analyze = new Vue({
               autoHideDelay: 2000
             });
         });
+    }
+  },
+  delimiters: ['[[', ']]']
+})
+
+var file_columns = new Vue({
+  el: '#file-columns',
+  data() {
+    return {
+      columns: undefined,
+      selected_col: null,
+      def_column: { value: null, text: 'Select column' },
+    }
+  },
+  mounted() {
+    this.refresh();
+  },
+  methods: {
+    refresh: function() {
+        this.columns = [this.def_column];
+        this.selected_col = null;
+    },
+    populate_columns: function(columns) {
+        this.refresh();
+        columns.push(this.def_column);
+        this.columns = columns;
+    },
+    update_chart: function() {
+        if (this.selected_col !== undefined) {
+            analysis_section.update_chart(this.selected_col);
+        }
     }
   },
   delimiters: ['[[', ']]']
