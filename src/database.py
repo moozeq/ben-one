@@ -1,5 +1,6 @@
 import pickle
 from pathlib import Path
+from threading import Lock
 from typing import Optional
 
 from src.analysis import DigitCounterAnalysis
@@ -41,6 +42,8 @@ class Database:
         with open('templates/help.html') as help_file:
             self._app_help = help_file.read()
 
+        self.lock = Lock()
+
         # store files to know where to save databases
         self._users_file = Path(users_db_file)
         self._analyses_file = Path(analyses_db_file)
@@ -55,8 +58,9 @@ class Database:
 
     def save(self):
         """After changes, store databases files"""
-        Database.store(self._users_file, self._users)
-        Database.store(self._analyses_file, self._analyses)
+        with self.lock:
+            Database.store(self._users_file, self._users)
+            Database.store(self._analyses_file, self._analyses)
 
     def get_filenames(self):
         """Get filenames to users files uploaded to server"""

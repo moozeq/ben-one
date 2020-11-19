@@ -8,4 +8,5 @@ RUN pip3 install -r requirements.txt
 RUN cp docs/docker_cfg.json ./cfg.json
 
 ENTRYPOINT [ "python3" ]
-CMD ["benone.py", "-c", "cfg.json"]
+
+CMD ["gunicorn", "--threads=4", "--worker-class=gthread", "--bind=0.0.0.0:5000", "benone:create_app()"]

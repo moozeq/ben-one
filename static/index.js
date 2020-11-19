@@ -176,9 +176,10 @@ var file_analyze = new Vue({
           });
     },
     analyze: function() {
-        this.show = true;   // show that analysis' working
+        this.show = true;                               // show that analysis' working
         let filename = files_section.get_selected();
         if (filename == undefined) {
+            this.show = false;                          // let do analysis again
             file_analyze.$bvToast.toast(`Select file first`, {
               title: 'Error',
               variant: 'danger',

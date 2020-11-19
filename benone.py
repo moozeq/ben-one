@@ -9,7 +9,7 @@ from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
 from src.analysis import DigitCounterAnalysis, WrongFile, Reader
-from src.config import AppConfig
+from src.config import AppConfig, DEF_CONFIG_FILENAME
 from src.database import Database
 from src.utils import Term
 
@@ -128,7 +128,7 @@ def add_api(app, database: Database):
             return {'success': True}, 200
 
 
-def create_app(app_config: AppConfig):
+def create_app(app_config: AppConfig = AppConfig(DEF_CONFIG_FILENAME)):
     app = Flask(__name__)
     if app_config.ENV == 'development':
         # refreshing application
@@ -154,18 +154,19 @@ def create_app(app_config: AppConfig):
 
     add_api(app, database)
 
-    app.run(host=app.config['HOST'], port=app.config['PORT'])
+    return app
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='BeNone is an Service for benning your data!')
-    parser.add_argument('-c', '--config', type=str, default='cfg.json', help='config filename')
+    parser.add_argument('-c', '--config', type=str, default=DEF_CONFIG_FILENAME, help='config filename')
 
     args = parser.parse_args()
     try:
-        config = AppConfig(args.config)
+        main_app_config = AppConfig(args.config)
     except ValueError:
         Term.error(f'Invalid configuration file = {args.config}')
         sys.exit(1)
 
-    create_app(config)
+    bpp = create_app(main_app_config)
+    bpp.run(main_app_config.HOST, main_app_config.PORT)

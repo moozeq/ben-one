@@ -1,5 +1,7 @@
 import json
 
+DEF_CONFIG_FILENAME = 'cfg.json'
+
 
 class AppConfig:
     """Class used to load config from file"""
