@@ -1,6 +1,6 @@
 {
   "UPLOAD_FOLDER": "data/users_files",
-  "ENV": "development",
-  "HOST": "127.0.0.1",
+  "ENV": "production",
+  "HOST": "0.0.0.0",
   "PORT": 5000
 }
