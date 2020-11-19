@@ -8,7 +8,7 @@ Flask based application for examining Benford's Law of provided file.
 git clone https://github.com/moozeq/CP_BenOne.git
 
 docker build -t python-ben CP_BenOne
-docker run -d -p 5000:5000 python-ben
+docker run --name run_docker_run -d -p 5000:5000 python-ben
 ```
 
 App should be available at [127.0.0.1:5000](http://127.0.0.1:5000)
