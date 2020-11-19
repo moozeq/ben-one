@@ -32,31 +32,15 @@ class WrongEnvironment(Exception):
         super().__init__(self.message)
 
 
-def create_app(app_config: AppConfig):
-    app = Flask(__name__)
-    if app_config.ENV == 'development':
-        # refreshing application
-        app.config = {
-            **app.config,
-            'SEND_FILE_MAX_AGE_DEFAULT': 0,
-            'TEMPLATES_AUTO_RELOAD': True
-        }
-    elif app_config.ENV == 'production':
-        pass
-    else:
-        raise WrongEnvironment(app_config.ENV)
-
-    app.config = {**app.config, **app_config.__dict__}
-
-    database = Database('data/users.pickle', 'data/analyses.pickle', app_config)
-
-    @app.context_processor
-    def inject_globals():
-        return {}
+def add_api(app, database: Database):
+    """Adds API for performing analyses and communication with database"""
 
     @app.route('/', methods=['GET'])
     def index():
-        return render_template('index.html')
+        return render_template(
+            'index.html',
+            help=database.get_app_help()
+        )
 
     @app.route('/api/files', methods=['GET'])
     def files_list():
@@ -107,10 +91,7 @@ def create_app(app_config: AppConfig):
         return {
                    'success': True,
                    'stats': analysis.get_stats(),
-                   'counters': analysis.get_counters('simple'),
-                   'frequenters': analysis.get_frequenters('simple'),
                    'lead_frequenters': analysis.get_frequenters('lead'),
-                   'benfords_law': analysis.get_benfords_law_pvalues(),
                }, 200
 
     @app.route('/api/upload', methods=['POST'])
@@ -140,11 +121,38 @@ def create_app(app_config: AppConfig):
                     return {'success': True}, 200
                 # same filename but different content - not allowed, sorry
                 else:
-                    return {'success': False, 'error': 'File with the same name already exists'
+                    return {'success': False, 'error': 'File with the same name already exists, '
                                                        'unfortunately it is not allowed yet'}, 400
             # everything's ok, save file under UPLOAD_FOLDER
             file.save(filename)
             return {'success': True}, 200
+
+
+def create_app(app_config: AppConfig):
+    app = Flask(__name__)
+    if app_config.ENV == 'development':
+        # refreshing application
+        app.config = {
+            **app.config,
+            'SEND_FILE_MAX_AGE_DEFAULT': 0,
+            'TEMPLATES_AUTO_RELOAD': True
+        }
+    elif app_config.ENV == 'production':
+        pass
+    else:
+        raise WrongEnvironment(app_config.ENV)
+
+    app.config = {**app.config, **app_config.__dict__}
+
+    database = Database('data/users.pickle', 'data/analyses.pickle', app_config)
+
+    @app.context_processor
+    def inject_globals():
+        return {
+            'home': f'http://{app_config.HOST}:{app_config.PORT}',
+        }
+
+    add_api(app, database)
 
     app.run(host=app.config['HOST'], port=app.config['PORT'])
 

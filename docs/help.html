@@ -1,0 +1,67 @@
+<p>
+    BeNone is an web service for examine your data if it's complaint to
+    Benford's Law. What is Benford's Law you may ask? Check it out
+    <b-link href="https://en.wikipedia.org/wiki/Benford%27s_law" target="_blank">here</b-link>
+    !
+</p>
+
+<p>
+    First you need to
+    <b-button class="c-help-btn" disabled variant="primary">Upload</b-button>
+    your file to our servers or just use someone's else file. File should be in one of following formats:<br>
+    &nbsp;- <b>.csv</b> (delimiter = <code>','</code>)<br>
+    &nbsp;- <b>.tsv</b> (delimiter = <code>'\t'</code>)<br>
+</p>
+
+<p>
+    Then select file (if you've uploaded it, it'll be selected automatically), choose it's type between
+    and available ones and press
+    <b-button class="c-help-btn" disabled variant="danger">Analyze</b-button>
+    .
+</p>
+
+<p>
+    After successful analysis, you will be prompted to select column (based on headers names) from
+    your data which will be compared against Benford's Law digits distribution.
+</p>
+
+<p>
+    When selected column, on graph you should see your data and below graph there will be information
+    about Benford's Law data compliance, one of following prompts:
+</p>
+
+<p>
+    <b-card bg-variant="danger" class="text-center m-1" text-variant="white">
+        <b-card-text>Benford's law compliant: 13.37% (Two-sample Kolmogorov-Smirnov test p-value = 0.1337)</b-card-text>
+    </b-card>
+    <b-card bg-variant="success" class="text-center m-1" text-variant="white">
+        <b-card-text>Benford's law compliant: 95.37% (Two-sample Kolmogorov-Smirnov test p-value = 0.9537)</b-card-text>
+    </b-card>
+</p>
+
+<p>
+    Below that prompt there are some stats from analysis of selected file, pretty self-explanatory, so i.e. your
+    data file is corrupted and some lines aren't corresponding to header, they will be omitted and
+    count of those lines will be prompted to you in this section. Example:
+</p>
+
+<pre><code>
+{
+  "benford": {                      # columns benford's law compliances
+    "3": 0.0007,
+    "4": 0.3517,
+    "7_2009": 1,
+    "8.40188": 0.0336,
+    "State": 0,
+    "Town": 0
+  },
+  "ext": ".tsv",                    # extension selected by user
+  "filename": "census_2009b",       # filename
+  "hash": "16032f...7356.tsv",      # file content hash + its extension
+  "header_size": 6,                 # size of header elements
+  "omitted_lines": 6,               # lines which couldn't be parsed
+  "parsed_lines": 19509,            # lines properly parsed
+  "parsed_words": 117018            # count of parsed words in file
+}
+</code></pre>
+</p>

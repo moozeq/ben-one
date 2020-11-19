@@ -29,6 +29,10 @@ class User:
 
 class Database:
     def __init__(self, users_db_file: str, analyses_db_file: str, app_config: AppConfig):
+        # load file with help
+        with open('docs/help.html') as help_file:
+            self._app_help = help_file.read()
+
         # store files to know where to save databases
         self._users_file = Path(users_db_file)
         self._analyses_file = Path(analyses_db_file)
@@ -49,6 +53,9 @@ class Database:
         paths = Path(self._path_to_files).glob('**/*')
         filenames = [file.name for file in paths if file.is_file()]
         return filenames
+
+    def get_app_help(self):
+        return self._app_help
 
     def add_user(self, user: User):
         if user.id in self._users:

@@ -54,8 +54,8 @@ class Reader:
     """
 
     supported_extensions = {
-        '.csv': ',',
         '.tsv': '\t',
+        '.csv': ',',
     }
 
     def __init__(self, filename: str, ext: str = ''):
@@ -157,7 +157,7 @@ class DigitCounterAnalysis:
         self._merged_digit_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_counters)
         self._merged_digit_lead_counter = DigitCounterAnalysis.get_merged_digit_counter(self._digit_lead_counters)
 
-        self._benfords_law_results = {
+        self._stats['benford'] = {
             column: DigitCounterAnalysis.benfords_law(frequenter)
             for column, frequenter in self._digit_lead_frequenters.items()
         }
@@ -208,13 +208,20 @@ class DigitCounterAnalysis:
         else:
             raise WrongCountersType
 
-    def get_benfords_law_pvalues(self):
-        """Get all pvalues per column from Kolmogorov-Smirnov test for Benford's law"""
-        return self._benfords_law_results
-
     @staticmethod
     def benfords_law(frequenter: Dict[str, float]):
+        """Use Two-sample Kolmogorov-Smirnov test to calculate p-values for Benford's law
+
+        Performing Two-sample Kolmogorov-Smirnov test on predefined Benford's law
+        digits distribution with frequenter from data.
+
+        Args:
+            frequenter (Dict[str, float]): frequenter as dict where digits (as strings)
+                are keys, and their frequencies as values
+
+        """
         from scipy.stats import ks_2samp
+        # benford's law digits distribution
         bl_frequencies = {
             '1': 30.1,
             '2': 17.6,

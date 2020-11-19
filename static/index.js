@@ -1,13 +1,5 @@
 var navbar = new Vue({
-  el: '#navbar',
-  data() {
-    return {}
-  },
-  methods: {
-    help() {
-        console.log('Not implemented');
-    }
-  }
+  el: '#navbar'
 })
 
 var ctx = document.getElementById('chart').getContext('2d');
@@ -42,31 +34,30 @@ var analysis_section = new Vue({
   el: '#analysis-section',
   data() {
     return {
-      stats: undefined,
-      benfords_law: undefined,
-      counters: undefined,
-      frequenters: undefined,
-      lead_frequenters: undefined,
-      ben_data: undefined,
+      stats: undefined,                         // statistics with benfords law analysis
+      lead_frequenters: undefined,              // lead frequenters provides data for digits
+      ben: {'value': 0.0, 'variant': 'danger'}, // current column benford's law compliant
       data: undefined,
     }
   },
   methods: {
-    set: function(stats, benfords_law, counters, frequenters, lead_frequenters) {
+    set: function(stats, lead_frequenters) {
         this.stats = stats;
-        this.benfords_law = benfords_law;
-        this.counters = counters;
-        this.frequenters = frequenters;
         this.lead_frequenters = lead_frequenters;
 
         // get columns names
         let columns = Object.keys(lead_frequenters);
         file_columns.populate_columns(columns);
     },
+    /*
+        Updating chart with new dataset from `lead_frequenters`
+    */
     update_chart: function(column) {
-        this.ben_data = 'Benfor\'s law pvalue = ' + this.benfords_law[column];
-        let lead_frequenter = this.lead_frequenters[column];
+        this.ben['pvalue'] = this.stats['benford'][column];                         // get benfords law results
+        this.ben['value'] = Number((this.ben['pvalue'] * 100.0).toFixed(4));        // set value as pval * 100
+        this.ben['variant'] = this.ben['pvalue'] >= 0.95 ? 'success' : 'danger';    // set proper prompt
 
+        let lead_frequenter = this.lead_frequenters[column];    // pick proper frequenter and set data
         var new_data = [];
         for (const i of Array(9).keys()) {
             const digit = (i + 1).toString(); // starts from 1 to 0
@@ -84,8 +75,8 @@ var files_section = new Vue({
   el: '#files-section',
   data() {
     return {
-      selected: undefined,
-      files: undefined,
+      selected: undefined,  // file selected from list
+      files: undefined,     // available files to analyze (as filenames)
     }
   },
   mounted() {
@@ -121,11 +112,13 @@ var file_upload = new Vue({
   el: '#file-upload',
   data() {
     return {
-      file: undefined,
+      show: false,      // when uploading, loading overlay is applied
+      file: undefined,  // file which will be uploaded after hitting 'Upload' button
     }
   },
   methods: {
     upload: function() {
+      this.show = true;   // show that file's uploading
       let formData = new FormData();
       formData.append('file', this.file);
 
@@ -142,8 +135,10 @@ var file_upload = new Vue({
               autoHideDelay: 2000
             });
             files_section.refresh(this.file.name); // refresh and select file
+            this.show = false;  // let upload new file now
         })
         .catch(error => {
+            this.show = false;  // let upload new file now here too
             file_upload.$bvToast.toast(`Could not upload file: ${error.response.data.error}`, {
               title: 'Error',
               variant: 'danger',
@@ -159,8 +154,9 @@ var file_analyze = new Vue({
   el: '#file-analyze',
   data() {
     return {
-      selected_ext: undefined,
-      extensions: undefined,
+      show: false,              // when uploading, loading overlay is applied
+      selected_ext: undefined,  // selected file extension
+      extensions: undefined,    // available extensions
     }
   },
   mounted() {
@@ -176,6 +172,7 @@ var file_analyze = new Vue({
           });
     },
     analyze: function() {
+        this.show = true;   // show that analysis' working
         let filename = files_section.get_selected();
         if (filename == undefined) {
             file_analyze.$bvToast.toast(`Select file first`, {
@@ -187,12 +184,10 @@ var file_analyze = new Vue({
       }
       axios.post('/api/analyze', {'filename': filename, 'ext': this.selected_ext}
         ).then(response => {
-            let stats = response.data.stats;
-            let benfords_law = response.data.benfords_law;
-            let counters = response.data.counters;
-            let frequenters = response.data.frequenters;
-            let lead_frequenters = response.data.lead_frequenters;
-            analysis_section.set(stats, benfords_law, counters, frequenters, lead_frequenters);
+            let stats = response.data.stats;                        // statistics with benfords law analysis
+            let lead_frequenters = response.data.lead_frequenters;  // frequenters for each column in data
+            analysis_section.set(stats, lead_frequenters);
+            this.show = false;                                      // let do analysis again
             file_analyze.$bvToast.toast(`File has been analyzed, now select column`, {
               title: 'Success',
               variant: 'success',
@@ -200,6 +195,7 @@ var file_analyze = new Vue({
             });
         })
         .catch(error => {
+            this.show = false;                                      // let do analysis again here too
             file_analyze.$bvToast.toast(`Could not analyze file: ${error.response.data.error}`, {
               title: 'Error',
               variant: 'danger',
@@ -215,25 +211,25 @@ var file_columns = new Vue({
   el: '#file-columns',
   data() {
     return {
-      columns: undefined,
-      selected_col: null,
-      def_column: { value: null, text: 'Select column' },
+      columns: undefined,   // columns from analyzed file
+      selected_col: null,   // selected by user column
+      def_column: { value: null, text: 'Select column', disabled: true },
     }
   },
   mounted() {
     this.refresh();
   },
   methods: {
-    refresh: function() {
+    refresh: function() {   // set single disabled column with text 'Select column'
         this.columns = [this.def_column];
         this.selected_col = null;
     },
-    populate_columns: function(columns) {
+    populate_columns: function(columns) {   // after file analysis, columns should be updated
         this.refresh();
         columns.push(this.def_column);
         this.columns = columns;
     },
-    update_chart: function() {
+    update_chart: function() {  // after selecting column chart should be updated
         if (this.selected_col !== undefined) {
             analysis_section.update_chart(this.selected_col);
         }

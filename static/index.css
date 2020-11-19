@@ -1,14 +1,21 @@
 .c-up-row {
-    margin-top: 2vh;
-    height: 65vh;
+    margin-top: 1em;
 }
 
 .c-down-row {
-    margin-top: 1vh;
-    height: 15vh;
+    margin-top: 1em;
 }
 
 .c-list {
-    height: 100%;
     overflow-y: auto;
+    max-height: 60vh;
+}
+
+.c-help-btn {
+    padding: .1rem .1rem !important;
+    margin: 0;
+}
+
+.c-help-card {
+    padding: .1rem !important;
 }

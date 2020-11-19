@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-<html lang="en"
->
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>BeNone</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 
-    <!-- Add this to <head> -->
+    <link href="{{ url_for('static', filename='benone.png') }}" rel="shortcut icon">
 
     <!-- Load required Bootstrap and BootstrapVue CSS -->
     <link href="//unpkg.com/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
@@ -24,23 +23,29 @@
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <b-navbar toggleable="lg" type="dark" variant="dark" id="navbar" sticky="true">
-        <b-navbar-brand href="{{ home }}">BeNone</b-navbar-brand>
-        <b-navbar-nav class="ml-auto">
-            <b-nav-item>
-                <b-button
-                        @click="help()"
-                        title="Help"
-                        v-b-tooltip.hover
-                        variant="outline-success">Help
-                </b-button>
-            </b-nav-item>
-            <b-nav-item>
-                <b-avatar icon="people-fill" variant="success"></b-avatar>
-            </b-nav-item>
-        </b-navbar-nav>
-    </b-navbar>
-
+<b-navbar id="navbar" sticky="true" toggleable="lg" type="dark" variant="dark">
+    <b-navbar-brand class="center-text" href="{{ home }}">
+        <b-img
+                class="d-inline-block align-top"
+                height="45" rounded
+                src="{{ url_for('static', filename='benone.png') }}"
+                width="45">
+        </b-img>
+    </b-navbar-brand>
+    <b-navbar-nav class="ml-auto">
+        <b-nav-item>
+            <b-button
+                    title="Help"
+                    v-b-modal.help-modal
+                    v-b-tooltip.hover
+                    variant="outline-success">Help
+            </b-button>
+        </b-nav-item>
+        <b-modal id="help-modal" ok-only size="lg" title="Help">
+            {{ help | safe }}
+        </b-modal>
+    </b-navbar-nav>
+</b-navbar>
     <div class="container">
         <!-- upper row containing plot and list of files --->
         <div class="row c-up-row">
@@ -52,10 +57,11 @@
             </div>
             <!-- list of files --->
             <div class="col-3">
+                <h4>Available files</h4>
                 <b-list-group class="border border-dark c-list" id="files-section">
                     <b-list-group-item :class="{'active': selected == index}" @click="select_file(file)"
                                        class="list-group-item-action" v-for="(file, index) in files">
-                        <b-row>
+                        <b-row class="">
                             [[ file ]]
                         </b-row>
                     </b-list-group-item>
@@ -66,13 +72,12 @@
         <div class="row c-down-row">
             <!-- statistics --->
             <div class="col-9">
-                <b-form-group class="border border-dark" id="analysis-section">
-                    <b-form-textarea
-                            max-rows="1"
-                            placeholder=""
-                            rows="1"
-                            v-model="ben_data"
-                    ></b-form-textarea>
+                <b-form-group id="analysis-section">
+                    <b-card :bg-variant="ben.variant" class="text-center" text-variant="white" v-model="ben">
+                        <b-card-text>Benford's law compliant: [[ ben.value ]]% (Two-sample Kolmogorov-Smirnov test
+                            p-value = [[ ben.pvalue]])
+                        </b-card-text>
+                    </b-card>
                     <b-form-textarea
                             max-rows="3"
                             placeholder=""
@@ -83,29 +88,33 @@
             </div>
             <!-- controls --->
             <div class="col-3">
-                <b-input-group id="file-upload">
-                    <b-form-file
-                            class="m-1"
-                            drop-placeholder="Drop file here..."
-                            placeholder="File"
-                            v-model="file"
-                    ></b-form-file>
-                    <b-input-group-append>
-                        <b-button @click="upload()" class="m-1" variant="primary">Upload</b-button>
-                    </b-input-group-append>
-                </b-input-group>
+                <b-overlay :show="show" id="file-upload" rounded="sm">
+                    <b-input-group>
+                        <b-form-file
+                                class="m-1"
+                                drop-placeholder="Drop here..."
+                                placeholder="File"
+                                v-model="file"
+                        ></b-form-file>
+                        <b-input-group-append>
+                            <b-button @click="upload()" class="m-1" variant="primary">Upload</b-button>
+                        </b-input-group-append>
+                    </b-input-group>
+                </b-overlay>
 
                 <b-input-group id="file-columns">
                     <b-form-select :options="columns" @change="update_chart()" class="m-1"
                                    v-model="selected_col"></b-form-select>
                 </b-input-group>
 
-                <b-input-group id="file-analyze">
-                    <b-form-select :options="extensions" class="m-1" v-model="selected_ext"></b-form-select>
-                    <b-input-group-append>
-                        <b-button @click="analyze()" class="m-1" variant="danger">Analyze</b-button>
-                    </b-input-group-append>
-                </b-input-group>
+                <b-overlay :show="show" id="file-analyze" rounded="sm">
+                    <b-input-group>
+                        <b-form-select :options="extensions" class="m-1" v-model="selected_ext"></b-form-select>
+                        <b-input-group-append>
+                            <b-button @click="analyze()" class="m-1" variant="danger">Analyze</b-button>
+                        </b-input-group-append>
+                    </b-input-group>
+                </b-overlay>
             </div>
         </div>
     </div>
@@ -120,7 +129,7 @@
     <!-- Load material design icons -->
     <link href="//cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet" type="text/css"/>
 
-    <!-- Load material design icons -->
+<!-- Load script with all vue js objects -->
     <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
