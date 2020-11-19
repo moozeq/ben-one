@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from src.analysis import DigitCounterAnalysis, WrongFile, WrongLetter, WrongColumn
@@ -5,7 +6,10 @@ from src.analysis import DigitCounterAnalysis, WrongFile, WrongLetter, WrongColu
 
 class TestAnalysis(unittest.TestCase):
     def setUp(self) -> None:
-        self.filename = 'simple_data.tsv'
+        # when running from base directory need to add 'tests/' prefix
+        self.test_root_dir = '' if os.getcwd().endswith('tests') else 'tests/'
+
+        self.filename = f'{self.test_root_dir}data/users_files/simple_data.tsv'
         self.wrong_filename = 'wrong_file'
 
     def test_read(self):

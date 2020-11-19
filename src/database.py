@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 from src.analysis import DigitCounterAnalysis
-from src.config import AppConfig
 
 
 class UserExists(Exception):
@@ -28,7 +27,16 @@ class User:
 
 
 class Database:
-    def __init__(self, users_db_file: str, analyses_db_file: str, app_config: AppConfig):
+    """Class for communicating with all files and databases.
+
+    Currently databases are stored as serialized objects in .pickle files.
+    Through this objects server can obtain list of files uploaded by users.
+    Two databases are available:
+        - users: with all users
+        - analyses: with all analyses performed on data
+    """
+
+    def __init__(self, users_db_file: str, analyses_db_file: str, upload_folder: str):
         # load file with help
         with open('docs/help.html') as help_file:
             self._app_help = help_file.read()
@@ -41,20 +49,23 @@ class Database:
         self._users = Database.load_default_db(users_db_file)
         self._analyses = Database.load_default_db(analyses_db_file)
 
-        self._path_to_files = app_config.UPLOAD_FOLDER
+        self._path_to_files = upload_folder
         # be sure that folder exists
         Path(self._path_to_files).mkdir(parents=True, exist_ok=True)
 
     def save(self):
+        """After changes, store databases files"""
         Database.store(self._users_file, self._users)
         Database.store(self._analyses_file, self._analyses)
 
     def get_filenames(self):
+        """Get filenames to users files uploaded to server"""
         paths = Path(self._path_to_files).glob('**/*')
         filenames = [file.name for file in paths if file.is_file()]
         return filenames
 
     def get_app_help(self):
+        """App usage help stored at 'docs/help.html'"""
         return self._app_help
 
     def add_user(self, user: User):
@@ -64,6 +75,13 @@ class Database:
         self.save()
 
     def add_analysis(self, analysis: DigitCounterAnalysis):
+        """Add new analysis.
+
+        Analysis id is basically file content hash + extension used to analyze.
+        Adding same analysis raising exception.
+        """
+
+        # check if analysis in database
         if analysis.id in self._analyses:
             raise AnalysisExists(analysis.id)
         self._analyses[analysis.id] = analysis
@@ -72,11 +90,13 @@ class Database:
     def get_user(self, username: str) -> Optional[User]:
         return self._users.get(username)
 
-    def get_analysis(self, file_hash: str) -> Optional[DigitCounterAnalysis]:
-        return self._analyses.get(file_hash)
+    def get_analysis(self, analysis_id: str) -> Optional[DigitCounterAnalysis]:
+        """Based on `analysis_id = file hash + extension`, get analysis from database"""
+        return self._analyses.get(analysis_id)
 
     @staticmethod
     def load_default_db(filename: str) -> dict:
+        """Load default database, currently pickled file"""
         if not (file := Path(filename)).exists():
             # initialize database
             Database.store(file, {})

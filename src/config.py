@@ -2,6 +2,8 @@ import json
 
 
 class AppConfig:
+    """Class used to load config from file"""
+
     DEF_UPLOAD_FOLDER = "data/users_files"
     DEF_ENV = "production"
     DEF_HOST = "127.0.0.1"

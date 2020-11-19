@@ -144,7 +144,7 @@ def create_app(app_config: AppConfig):
 
     app.config = {**app.config, **app_config.__dict__}
 
-    database = Database('data/users.pickle', 'data/analyses.pickle', app_config)
+    database = Database('data/users.pickle', 'data/analyses.pickle', app_config.UPLOAD_FOLDER)
 
     @app.context_processor
     def inject_globals():

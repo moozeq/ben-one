@@ -2,8 +2,17 @@
 
 Flask based application for examining Benford's Law of provided file.
 
-# Usage
+# Run
 
 ```bash
-./benone.py -h
+git clone https://github.com/moozeq/CP_BenOne.git
+cd CP_BenOne
+python3 -m venv venv
+pip3 install -r requirements.txt
+
+# copy simple config file
+cp docs/simple_cfg.json ./cfg.json
+
+# run app
+./benone.py -c cfg.json
 ```
