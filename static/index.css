@@ -12,6 +12,21 @@
     max-height: 56vh;
 }
 
+.c-btn {
+    width: 100%;
+}
+
+.c-navbar {
+    background-color: black !important;
+}
+
+.c-form-textarea {
+    background: white !important;
+    border-color: #cccccc !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+}
+
 .c-help-btn {
     padding: .1rem .1rem !important;
     margin: 0;

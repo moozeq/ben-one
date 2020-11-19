@@ -23,7 +23,7 @@
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 <body>
-<b-navbar id="navbar" sticky="true" toggleable="lg" type="dark" variant="dark">
+<b-navbar id="navbar" sticky="true" toggleable="lg" class="c-navbar">
     <b-navbar-brand class="center-text" href="{{ home }}">
         <b-img
                 class="d-inline-block align-top"
@@ -38,7 +38,7 @@
                     title="Help"
                     v-b-modal.help-modal
                     v-b-tooltip.hover
-                    variant="outline-success">Help
+                    variant="success">Help
             </b-button>
         </b-nav-item>
         <b-modal id="help-modal" ok-only size="lg" title="Help">
@@ -79,9 +79,11 @@
                         </b-card-text>
                     </b-card>
                     <b-form-textarea
-                            max-rows="3"
-                            placeholder=""
-                            rows="3"
+                            class="c-form-textarea"
+                            readonly
+                            max-rows="5"
+                            placeholder="Statistics from analysis will be displayed here"
+                            rows="5"
                             v-model="stats"
                     ></b-form-textarea>
                 </b-form-group>
@@ -98,10 +100,10 @@
                                 v-model="file"
                                 autofocus="true"
                         ></b-form-file>
-                        <b-input-group-append>
-                            <b-button @click="upload()" class="m-1" ref="file-upload-btn" variant="primary">Upload
-                            </b-button>
-                        </b-input-group-append>
+                    </b-input-group>
+                    <b-input-group>
+                        <b-button @click="upload()" class="m-1 c-btn" ref="file-upload-btn" variant="primary">Upload
+                        </b-button>
                     </b-input-group>
                 </b-overlay>
 

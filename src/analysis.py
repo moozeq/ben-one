@@ -93,6 +93,21 @@ class Reader:
             yield from reader
 
     @staticmethod
+    def get_head(reader: 'Reader', count: int = 5) -> str:
+        """Get head of file as max count first lines"""
+        reader_it = iter(reader)
+
+        head = []
+        for i, line in enumerate(reader_it):
+            line_str = reader.delim.join(line)
+            head.append(line_str)
+            if i >= count:
+                break
+
+        head_str = '\n'.join(head)
+        return head_str
+
+    @staticmethod
     def file_id(file: Path, ext: str) -> str:
         """Unique file ID per content, filename not included except extension."""
         # add extension which were used to parse to id for making distinctions
@@ -133,7 +148,14 @@ class DigitCounterAnalysis:
     """
 
     def __init__(self, filename: str, /, *, ext: str = ''):
-        counters, lead_counters, stats = DigitCounterAnalysis.analyze_file(filename, ext)
+        reader = Reader(filename, ext)
+
+        # get head of file to show it to user
+        self._head = Reader.get_head(reader)
+
+        # get letters counters, lead letters counters and stats
+        counters, lead_counters, stats = DigitCounterAnalysis.analyze_file(reader)
+
         self._stats = stats
         # set analysis id as file hash
         self.id = stats['hash']
@@ -164,6 +186,9 @@ class DigitCounterAnalysis:
 
     def get_stats(self) -> Dict[str, Union[str, int]]:
         return self._stats
+
+    def get_head(self) -> str:
+        return self._head
 
     def get_count(self, letter: Union[str, int], column: str = '') -> int:
         """Get letter count for specific column, or if column name not provided - whole file"""
@@ -281,7 +306,7 @@ class DigitCounterAnalysis:
         })
 
     @staticmethod
-    def analyze_file(filename: str, ext: str = '') -> (
+    def analyze_file(reader: Reader) -> (
             Dict[str, Counter],
             Dict[str, Union[str, int]]):
         """Analyzing file in terms of letters usage.
@@ -292,9 +317,7 @@ class DigitCounterAnalysis:
         easily analyze.
 
         Args:
-            filename (str): path to file which will be analyzed
-            ext (str): file format, if empty, try recognizing
-                by file extension
+            reader (Reader): file Reader object
 
         Returns:
             1st: dictionary of counters, where keys are columns names
@@ -304,7 +327,6 @@ class DigitCounterAnalysis:
             3rd: dictionary with statistics from parsing file
         """
 
-        reader = Reader(filename, ext)
         reader_it = iter(reader)
 
         # get file header

@@ -10,4 +10,4 @@ RUN python3 -m unittest discover tests
 
 ENTRYPOINT [ "gunicorn" ]
 
-CMD ["--threads=4", "--worker-class=gthread", "--bind=0.0.0.0:5000", "benone:create_app()"]
+CMD ["--threads=8", "--worker-class=gthread", "--bind=0.0.0.0:5000", "benone:create_app()"]
