@@ -221,6 +221,7 @@ class DigitCounterAnalysis:
 
         """
         from scipy.stats import ks_2samp
+
         # benford's law digits distribution
         bl_frequencies = {
             '1': 30.1,
@@ -238,7 +239,6 @@ class DigitCounterAnalysis:
         for digit in bl_frequencies:
             bl_f.append(bl_frequencies[digit])
             sa_f.append(frequenter[digit])
-
         result = ks_2samp(bl_f, sa_f)
 
         return round(result.pvalue, 4)

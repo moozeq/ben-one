@@ -117,6 +117,9 @@ var file_upload = new Vue({
     }
   },
   methods: {
+    focus_btn: function() {
+        this.$refs['file-upload-btn'].focus(); // after browse file selected, focus on upload button
+    },
     upload: function() {
       this.show = true;   // show that file's uploading
       let formData = new FormData();
@@ -136,6 +139,7 @@ var file_upload = new Vue({
             });
             files_section.refresh(this.file.name); // refresh and select file
             this.show = false;  // let upload new file now
+            file_analyze.$refs['file-analyze-btn'].focus(); // focus on analyze button
         })
         .catch(error => {
             this.show = false;  // let upload new file now here too
@@ -188,6 +192,7 @@ var file_analyze = new Vue({
             let lead_frequenters = response.data.lead_frequenters;  // frequenters for each column in data
             analysis_section.set(stats, lead_frequenters);
             this.show = false;                                      // let do analysis again
+            file_columns.$refs['file-columns-select'].focus();      // focus on column select
             file_analyze.$bvToast.toast(`File has been analyzed, now select column`, {
               title: 'Success',
               variant: 'success',
@@ -196,6 +201,14 @@ var file_analyze = new Vue({
         })
         .catch(error => {
             this.show = false;                                      // let do analysis again here too
+            if (error.response === undefined) {
+                file_analyze.$bvToast.toast(`Undefined error happend`, {
+                  title: 'Error',
+                  variant: 'danger',
+                  autoHideDelay: 2000
+                });
+                return;
+            }
             file_analyze.$bvToast.toast(`Could not analyze file: ${error.response.data.error}`, {
               title: 'Error',
               variant: 'danger',

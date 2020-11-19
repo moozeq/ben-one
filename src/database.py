@@ -38,7 +38,7 @@ class Database:
 
     def __init__(self, users_db_file: str, analyses_db_file: str, upload_folder: str):
         # load file with help
-        with open('docs/help.html') as help_file:
+        with open('templates/help.html') as help_file:
             self._app_help = help_file.read()
 
         # store files to know where to save databases

@@ -91,27 +91,36 @@
                 <b-overlay :show="show" id="file-upload" rounded="sm">
                     <b-input-group>
                         <b-form-file
+                                @change="focus_btn()"
                                 class="m-1"
                                 drop-placeholder="Drop here..."
                                 placeholder="File"
                                 v-model="file"
+                                autofocus="true"
                         ></b-form-file>
                         <b-input-group-append>
-                            <b-button @click="upload()" class="m-1" variant="primary">Upload</b-button>
+                            <b-button @click="upload()" class="m-1" ref="file-upload-btn" variant="primary">Upload
+                            </b-button>
                         </b-input-group-append>
                     </b-input-group>
                 </b-overlay>
 
                 <b-input-group id="file-columns">
-                    <b-form-select :options="columns" @change="update_chart()" class="m-1"
-                                   v-model="selected_col"></b-form-select>
+                    <b-form-select
+                            :options="columns"
+                            @change="update_chart()"
+                            class="m-1"
+                            ref="file-columns-select"
+                            v-model="selected_col">
+                    </b-form-select>
                 </b-input-group>
 
                 <b-overlay :show="show" id="file-analyze" rounded="sm">
                     <b-input-group>
                         <b-form-select :options="extensions" class="m-1" v-model="selected_ext"></b-form-select>
                         <b-input-group-append>
-                            <b-button @click="analyze()" class="m-1" variant="danger">Analyze</b-button>
+                            <b-button @click="analyze()" class="m-1" ref="file-analyze-btn" variant="danger">Analyze
+                            </b-button>
                         </b-input-group-append>
                     </b-input-group>
                 </b-overlay>
