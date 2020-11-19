@@ -6,6 +6,7 @@ WORKDIR /CP_BenOne
 
 RUN pip3 install -r requirements.txt
 RUN cp docs/docker_cfg.json ./cfg.json
+RUN python3 -m unittest discover tests
 
 ENTRYPOINT [ "gunicorn" ]
 
