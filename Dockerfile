@@ -1,8 +1,8 @@
 FROM python:3
 
-RUN git clone https://github.com/moozeq/CP_BenOne.git
+RUN git clone https://github.com/moozeq/ben-one.git
 
-WORKDIR /CP_BenOne
+WORKDIR /ben-one
 
 RUN pip3 install -r requirements.txt
 RUN cp docs/docker_cfg.json ./cfg.json
